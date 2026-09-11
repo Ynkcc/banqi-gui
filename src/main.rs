@@ -1,13 +1,13 @@
 #[cfg(feature = "torch")]
-use banqi_4x8::engine::{MctsDlPolicy, ModelWrapper};
-use banqi_4x8::engine::{Policy, RandomPolicy, RevealFirstPolicy};
+use banqi_engine::engine::{MctsDlPolicy, ModelWrapper};
+use banqi_engine::engine::{Policy, RandomPolicy, RevealFirstPolicy};
 #[cfg(feature = "onnx")]
-use banqi_4x8::inference::onnx::{OnnxMctsPolicy, OnnxModel};
-use banqi_4x8::inference::nnue::NnueEvaluator;
-use banqi_4x8::core::env::*;
+use banqi_engine::inference::onnx::{OnnxMctsPolicy, OnnxModel};
+use banqi_engine::nnue::NnueEvaluator;
+use banqi_core::core::env::*;
 #[cfg(any(feature = "torch", feature = "onnx"))]
-use banqi_4x8::core::mcts::GumbelMCTS;
-use banqi_4x8::core::mcts::{GumbelConfig, MctsArena};
+use banqi_core::core::mcts::GumbelMCTS;
+use banqi_core::core::mcts::{GumbelConfig, MctsArena};
 use serde::{Deserialize, Serialize}; // Added Deserialize
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -226,7 +226,7 @@ fn mcts_search_blocking(
         #[cfg(feature = "torch")]
         OpponentType::MctsDL => {
             let model = torch_model.ok_or("未加载 .pt 模型，无法执行 MCTS+DL 搜索")?;
-            let evaluator = banqi_4x8::engine::TchEvaluator::<DarkChessEnv>::new(model);
+            let evaluator = banqi_engine::engine::TchEvaluator::<DarkChessEnv>::new(model);
             let mut mcts = GumbelMCTS::new(env, &evaluator, config);
             let result = mcts
                 .run()
@@ -242,7 +242,7 @@ fn mcts_search_blocking(
         #[cfg(feature = "onnx")]
         OpponentType::MctsOnnx => {
             let model = onnx_model.ok_or("未加载 .onnx 模型，无法执行 MCTS+ONNX 搜索")?;
-            let evaluator = banqi_4x8::inference::onnx::OnnxEvaluator::<DarkChessEnv>::new(model);
+            let evaluator = banqi_engine::inference::onnx::OnnxEvaluator::<DarkChessEnv>::new(model);
             let mut mcts = GumbelMCTS::new(env, &evaluator, config);
             let result = mcts
                 .run()
@@ -260,12 +260,12 @@ fn mcts_search_blocking(
 }
 
 #[cfg(feature = "torch")]
-type TorchModelOpt = Option<Arc<banqi_4x8::engine::ModelWrapper>>;
+type TorchModelOpt = Option<Arc<banqi_engine::engine::ModelWrapper>>;
 #[cfg(not(feature = "torch"))]
 type TorchModelOpt = Option<()>;
 
 #[cfg(feature = "onnx")]
-type OnnxModelOpt = Option<Arc<banqi_4x8::inference::onnx::OnnxModel>>;
+type OnnxModelOpt = Option<Arc<banqi_engine::inference::onnx::OnnxModel>>;
 #[cfg(not(feature = "onnx"))]
 type OnnxModelOpt = Option<()>;
 
@@ -457,12 +457,12 @@ async fn bot_move(state: State<'_, AppState>) -> Result<StepResult, String> {
     let chosen_action = match opp_type {
         OpponentType::Engine => {
             let budget = *state.engine_budget.lock().unwrap();
-            let cfg = banqi_4x8::core::expectimax::SearchConfig {
+            let cfg = banqi_core::core::expectimax::SearchConfig {
                 node_budget: budget,
                 ..Default::default()
             };
             tauri::async_runtime::spawn_blocking(move || {
-                banqi_4x8::core::expectimax::search(&snapshot, &cfg).map(|r| r.action)
+                banqi_core::core::expectimax::search(&snapshot, &cfg).map(|r| r.action)
             })
             .await
             .map_err(|e| format!("引擎搜索线程错误: {e}"))?
@@ -485,13 +485,13 @@ async fn bot_move(state: State<'_, AppState>) -> Result<StepResult, String> {
             let depth = *state.nnue_depth.lock().unwrap();
             let budget = *state.nnue_budget.lock().unwrap();
             tauri::async_runtime::spawn_blocking(move || {
-                let cfg = banqi_4x8::core::expectimax::SearchConfig {
+                let cfg = banqi_core::core::expectimax::SearchConfig {
                     node_budget: budget,
                     max_depth: depth,
                     nnue_evaluator: Some(evaluator),
                     ..Default::default()
                 };
-                banqi_4x8::core::expectimax::search(&snapshot, &cfg).map(|r| r.action)
+                banqi_core::core::expectimax::search(&snapshot, &cfg).map(|r| r.action)
             })
             .await
             .map_err(|e| format!("NNUE Expectimax 搜索线程错误: {e}"))?

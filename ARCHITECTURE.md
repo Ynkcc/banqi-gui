@@ -5,7 +5,7 @@
 
 ## 1. 定位与结构
 
-Tauri 2 桌面 GUI：`src-tauri/` 为独立 crate `banqi-tauri`（workspace member，path 依赖 `banqi_4x8`——**拆分时需改为 git 依赖**）。
+Tauri 2 桌面 GUI：独立 crate `banqi-tauri`（path 依赖 `banqi-core` + `banqi-engine`——**后续切 git 依赖**；领域核心在 `banqi-core`，策略/torch/onnx/NNUE 推理在 `banqi-engine`）。
 
 | 条目 | 说明 |
 |---|---|
@@ -34,3 +34,4 @@ Tauri 2 桌面 GUI：`src-tauri/` 为独立 crate `banqi-tauri`（workspace memb
 ## 5. 变更记录
 
 - 2026-09-11：从主仓库 `docs/ARCHITECTURE.md` §5 拆出，作为未来独立仓库的架构文档。
+- 2026-09-11：依赖切换：`banqi_4x8`（主仓库 path）→ `banqi-core` + `banqi-engine`（各自 path；feature `torch`/`onnx` 透传 `banqi-engine`）；`main.rs` 导入路径同步改写（core→`banqi_core::core`，engine/inference/nnue→`banqi_engine`）。

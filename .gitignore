@@ -7,3 +7,5 @@ frontend/dist/
 
 # ---- 本地 cargo 配置 ----
 .cargo/config.toml
+
+Cargo.lock
