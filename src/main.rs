@@ -686,6 +686,21 @@ fn project_reveal_probabilities(raw: &[f32]) -> Vec<f32> {
 
 // ===================== 额外命令：模型与参数 =====================
 
+/// 编译期启用的推理后端：前端据此隐藏无法使用的对手与模型类型。
+#[derive(Debug, Clone, Serialize)]
+struct Capabilities {
+    torch: bool,
+    onnx: bool,
+}
+
+#[tauri::command]
+fn get_capabilities() -> Capabilities {
+    Capabilities {
+        torch: cfg!(feature = "torch"),
+        onnx: cfg!(feature = "onnx"),
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct ModelEntry {
     name: String,
@@ -924,6 +939,7 @@ pub fn run() {
             get_game_state,
             get_opponent_type,
             get_move_action,
+            get_capabilities,
             list_models,
             load_model,
             set_mcts_iterations,

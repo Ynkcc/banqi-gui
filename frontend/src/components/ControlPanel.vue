@@ -1,24 +1,38 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { Opponent, Variant } from '../api/types';
 import { useGame } from '../composables/useGame';
 import { useSettings } from '../composables/useSettings';
 import { useToast } from '../composables/useToast';
 
 const { store, resetGame } = useGame();
-const { settings, ptModels, nnueModels, refreshModels, applyEngineBudget, applyMctsIters, applyNnue, loadModel } =
-  useSettings();
+const {
+  settings,
+  capabilities,
+  ptModels,
+  nnueModels,
+  refreshModels,
+  applyEngineBudget,
+  applyMctsIters,
+  applyNnue,
+  loadModel,
+} = useSettings();
 const toast = useToast();
 
-const OPPONENTS: { value: Opponent; label: string }[] = [
+const ALL_OPPONENTS: { value: Opponent; label: string; feature?: 'torch' | 'onnx' }[] = [
   { value: 'PvP', label: '本地双人 (PvP)' },
   { value: 'Random', label: '电脑 (随机)' },
   { value: 'RevealFirst', label: '电脑 (优先翻棋)' },
   { value: 'Engine', label: '电脑 (强引擎)' },
-  { value: 'MctsDL', label: '电脑 (MCTS+DL)' },
-  { value: 'MctsOnnx', label: '电脑 (MCTS+ONNX)' },
+  { value: 'MctsDL', label: '电脑 (MCTS+DL)', feature: 'torch' },
+  { value: 'MctsOnnx', label: '电脑 (MCTS+ONNX)', feature: 'onnx' },
   { value: 'Nnue', label: '电脑 (NNUE)' },
 ];
+
+// 仅展示后端已编译进去的推理后端对应的对手
+const OPPONENTS = computed(() =>
+  ALL_OPPONENTS.filter((o) => o.feature === undefined || capabilities[o.feature]),
+);
 
 const VARIANTS: { value: Variant; label: string }[] = [
   { value: 'dark', label: '暗棋 (4x8)' },
@@ -47,6 +61,12 @@ function showMctsSettings(): boolean {
 function showNnueSettings(): boolean {
   return settings.opponent === 'Nnue';
 }
+
+const mctsModelHint = computed(() =>
+  capabilities.torch
+    ? '先加载模型（.pt 走 MCTS+DL，.onnx 走 MCTS+ONNX），再选择对应对手开始新游戏。'
+    : '先加载 .onnx 模型（走 MCTS+ONNX），再选择对应对手开始新游戏。',
+);
 
 function onNewGame() {
   resetGame(settings.opponent, settings.variant);
@@ -128,7 +148,7 @@ async function onLoadNnueModel() {
         <input v-model.number="settings.mctsIters" type="number" min="1" />
       </label>
       <button @click="applyMctsIters">应用搜索次数</button>
-      <p class="hint">先加载模型（.pt 走 MCTS+DL，.onnx 走 MCTS+ONNX），再选择对应对手开始新游戏。</p>
+      <p class="hint">{{ mctsModelHint }}</p>
     </section>
 
     <section v-if="showNnueSettings()" class="panel-card">

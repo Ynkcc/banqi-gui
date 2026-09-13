@@ -16,12 +16,13 @@ Tauri 2 桌面 GUI：独立 crate `banqi-tauri`（path 依赖 `banqi-core` + `ba
 ## 2. 前端
 
 - `src/api/types.ts` + `src/api/client.ts`：command 返回类型定义与 `invoke` 封装（`api.*`）；
-- `src/composables/`：`useGame`（对局状态/走子/高亮/日志/机器人回合）、`useSettings`（变体/对手/模型列表与参数）、`useMctsTree`（搜索树懒加载缓存 + 布局）、`useToast`、`useLogs`；
+- `src/composables/`：`useGame`（对局状态/走子/高亮/日志/机器人回合）、`useSettings`（变体/对手/模型列表与参数、后端能力探测）、`useMctsTree`（搜索树懒加载缓存 + 布局）、`useToast`、`useLogs`；
 - `src/components/`：`App`（三栏布局 + 抽屉）、`BoardView`、`ControlPanel`、`StatusPanel`、`LogPanel`、`PieceTray`、`BitboardPanel`、`MctsTreePanel`、`ToastHost`；`src/domain/pieces.ts` 棋子/位板常量。
 
 ## 3. `#[tauri::command]` 列表
 
 - 对局：`reset_game`、`step_game`、`bot_move`、`get_game_state`、`get_move_action`、`get_opponent_type`
+- 能力探测：`get_capabilities`（返回编译期 feature 启用的推理后端 `torch`/`onnx`；前端据此隐藏 MctsDL/MctsOnnx 对手与对应的 `.pt`/`.onnx` 模型项）
 - 模型：`list_models`、`load_model`
 - 引擎参数：`set_minimax_depth`、`set_mcts_iterations`、`set_engine_budget`、`set_heuristic_sims`、`set_nnue_depth`、`set_nnue_budget`
 - MCTS 树可视化（懒加载）：`mcts_get_root`、`mcts_get_children`、`mcts_get_node_detail`、`mcts_search`。MctsDL/MctsOnnx 落子后整棵 `MctsArena<DarkChessEnv>` 常驻 `AppState.mcts_tree`，前端按需逐节点拉取子边渲染（SVG 树面板，机会节点 outcome 亦懒展开）
@@ -35,3 +36,4 @@ Tauri 2 桌面 GUI：独立 crate `banqi-tauri`（path 依赖 `banqi-core` + `ba
 
 - 2026-09-11：从主仓库 `docs/ARCHITECTURE.md` §5 拆出，作为未来独立仓库的架构文档。
 - 2026-09-11：依赖切换：`banqi_4x8`（主仓库 path）→ `banqi-core` + `banqi-engine`（各自 path；feature `torch`/`onnx` 透传 `banqi-engine`）；`main.rs` 导入路径同步改写（core→`banqi_core::core`，engine/inference/nnue→`banqi_engine`）。
+- 2026-09-13：新增 `get_capabilities` 命令；前端按后端已编译 feature 过滤对手与模型列表（未启用 torch 即不显示 MctsDL 与 `.pt` 模型）。棋盘改为由 `--cell`（容器可用宽高与行列数取 min）推导尺寸，格子恒为正方形且不再溢出容器（修复 4x2 需滚动、棋子变形、托盘/血量卡片被棋盘压住）。

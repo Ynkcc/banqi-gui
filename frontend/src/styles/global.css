@@ -203,25 +203,45 @@ button.mini {
   min-height: 0;
   width: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
+  /* 尺寸容器：棋盘按此处的实际可用宽高换算格子边长，且棋盘尺寸不再反向撑大容器 */
+  container-type: size;
 }
 
+/* 棋盘尺寸由「容器可用宽高」与行列数共同推出唯一的格子边长 --cell，
+   行列恒等分，故格子在任何窗口尺寸下都保持正方形，且整体不溢出容器。 */
 .chess-board {
+  --board-gap: 5px;
+  --board-pad: 10px;
+  --board-border: 5px;
+  --cell: min(
+    calc(
+      (100cqw - 2 * var(--board-border) - 2 * var(--board-pad) -
+            (var(--board-cols) - 1) * var(--board-gap)) / var(--board-cols)
+    ),
+    calc(
+      (100cqh - 2 * var(--board-border) - 2 * var(--board-pad) -
+            (var(--board-rows) - 1) * var(--board-gap)) / var(--board-rows)
+    )
+  );
   display: grid;
-  gap: 5px;
-  padding: 10px;
+  grid-template-columns: repeat(var(--board-cols), 1fr);
+  grid-template-rows: repeat(var(--board-rows), 1fr);
+  gap: var(--board-gap);
+  padding: var(--board-pad);
   background: #dcb35c;
-  border: 5px solid #8b5a2b;
+  border: var(--board-border) solid #8b5a2b;
   border-radius: 8px;
-  width: min(680px, 100%);
+  width: calc(
+    var(--board-cols) * var(--cell) + (var(--board-cols) - 1) * var(--board-gap) +
+      2 * var(--board-pad) + 2 * var(--board-border)
+  );
+  height: calc(
+    var(--board-rows) * var(--cell) + (var(--board-rows) - 1) * var(--board-gap) +
+      2 * var(--board-pad) + 2 * var(--board-border)
+  );
   box-shadow: 0 6px 18px rgba(80, 50, 20, 0.25);
-}
-
-/* 正方形棋盘（mini / 4x4）按可用高度自适应，避免纵向溢出 */
-.chess-board.board-square {
-  width: auto;
-  height: 100%;
-  max-width: 100%;
 }
 
 .chess-cell {
@@ -231,7 +251,7 @@ button.mini {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(16px, 3vw, 26px);
+  font-size: calc(var(--cell) * 0.62);
   font-weight: bold;
   cursor: pointer;
   user-select: none;
@@ -262,7 +282,7 @@ button.mini {
 .chess-cell.hidden::after {
   content: '?';
   position: absolute;
-  font-size: 24px;
+  font-size: calc(var(--cell) * 0.55);
   color: var(--reveal-accent);
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
 }

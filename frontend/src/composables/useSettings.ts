@@ -1,6 +1,6 @@
 import { reactive, ref } from 'vue';
 import { api } from '../api/client';
-import type { ModelEntry, Opponent, Variant } from '../api/types';
+import type { Capabilities, ModelEntry, Opponent, Variant } from '../api/types';
 import { appendLog } from './useLogs';
 import { useToast } from './useToast';
 
@@ -15,14 +15,32 @@ const settings = reactive({
   nnueBudget: 200000,
 });
 
+const capabilities = reactive<Capabilities>({ torch: false, onnx: false });
 const ptModels = ref<ModelEntry[]>([]);
 const nnueModels = ref<ModelEntry[]>([]);
 const modelsLoading = ref(false);
 
+/** 读取后端编译期启用的推理后端（.pt 需 torch，.onnx 需 onnx，.nnue 无依赖）。 */
+async function loadCapabilities() {
+  try {
+    Object.assign(capabilities, await api.getCapabilities());
+  } catch (e) {
+    console.error('get_capabilities failed:', e);
+    toast.error('读取引擎能力失败: ' + e);
+  }
+}
+
+function modelUsable(path: string): boolean {
+  const p = path.toLowerCase();
+  if (p.endsWith('.pt')) return capabilities.torch;
+  if (p.endsWith('.onnx')) return capabilities.onnx;
+  return true;
+}
+
 async function refreshModels() {
   modelsLoading.value = true;
   try {
-    const models = await api.listModels();
+    const models = (await api.listModels()).filter((m) => modelUsable(m.path));
     ptModels.value = models.filter((m) => !m.path.toLowerCase().endsWith('.nnue'));
     nnueModels.value = models.filter((m) => m.path.toLowerCase().endsWith('.nnue'));
   } catch (e) {
@@ -90,6 +108,8 @@ async function loadModel(path: string): Promise<boolean> {
 export function useSettings() {
   return {
     settings,
+    capabilities,
+    loadCapabilities,
     ptModels,
     nnueModels,
     modelsLoading,

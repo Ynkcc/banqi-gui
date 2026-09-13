@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
+  Capabilities,
   GameState,
   MctsEdge,
   MctsNodeDetail,
@@ -31,6 +32,9 @@ export const api = {
   },
   listModels() {
     return invoke<ModelEntry[]>('list_models');
+  },
+  getCapabilities() {
+    return invoke<Capabilities>('get_capabilities');
   },
   loadModel(path: string) {
     return invoke<string>('load_model', { path });

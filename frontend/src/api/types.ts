@@ -43,6 +43,12 @@ export interface ModelEntry {
   path: string;
 }
 
+/** 后端编译期启用的推理后端（torch = TorchScript/MctsDL，onnx = MctsOnnx）。 */
+export interface Capabilities {
+  torch: boolean;
+  onnx: boolean;
+}
+
 export interface MctsEdge {
   child_id: number;
   action: number;

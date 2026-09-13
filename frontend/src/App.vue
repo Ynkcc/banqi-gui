@@ -12,7 +12,7 @@ import StatusPanel from './components/StatusPanel.vue';
 import ToastHost from './components/ToastHost.vue';
 
 const { store, loadInitialState, deselect } = useGame();
-const { refreshModels } = useSettings();
+const { loadCapabilities, refreshModels } = useSettings();
 
 const activeDrawer = ref<'none' | 'bitboard' | 'mcts'>('none');
 const overlayVisible = computed(() => activeDrawer.value !== 'none');
@@ -33,6 +33,7 @@ function onKeydown(evt: KeyboardEvent) {
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown);
   await loadInitialState();
+  await loadCapabilities();
   await refreshModels();
 });
 onUnmounted(() => window.removeEventListener('keydown', onKeydown));
