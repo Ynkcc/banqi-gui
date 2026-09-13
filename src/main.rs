@@ -78,6 +78,8 @@ struct AppState {
     nnue_budget: Mutex<u64>,
     // 最近一次 Gumbel MCTS 搜索树（供前端按需浏览；非 MCTS 对手时为 None）
     mcts_tree: Mutex<Option<MctsTreeHandle>>,
+    // 固定的模型目录（~/banqi-models）：模型搜索与存放的唯一位置
+    models_dir: std::path::PathBuf,
 }
 
 /// 常驻后端的 MCTS 树：arena + 根索引 + 本次搜索选中的动作。
@@ -707,7 +709,7 @@ struct ModelEntry {
     path: String,
 }
 
-/// 递归收集目录下的 .pt / .onnx 模型（忽略隐藏目录 / node_modules / target 等）。
+/// 递归收集目录下的 .pt / .onnx / .nnue 模型。
 fn collect_models(dir: &std::path::Path, depth: usize, out: &mut Vec<ModelEntry>) {
     if depth > 4 {
         return;
@@ -719,10 +721,6 @@ fn collect_models(dir: &std::path::Path, depth: usize, out: &mut Vec<ModelEntry>
         let path = e.path();
         let Ok(ft) = e.file_type() else { continue };
         if ft.is_dir() {
-            let name = e.file_name().to_string_lossy().to_string();
-            if name.starts_with('.') || name == "node_modules" || name == "target" {
-                continue;
-            }
             collect_models(&path, depth + 1, out);
         } else if ft.is_file() {
             let is_model = path
@@ -744,21 +742,38 @@ fn collect_models(dir: &std::path::Path, depth: usize, out: &mut Vec<ModelEntry>
     }
 }
 
-/// 列出 python/outputs 目录下的 .pt / .onnx 模型
+/// 固定模型目录：~/banqi-models。模型的搜索与存放都以它为准（用户直接复制文件进来即可）。
+fn models_dir(home: &std::path::Path) -> std::path::PathBuf {
+    home.join("banqi-models")
+}
+
+/// 模型列表：附带固定目录的绝对路径，供前端展示与提示。
+#[derive(Debug, Clone, Serialize)]
+struct ModelList {
+    dir: String,
+    models: Vec<ModelEntry>,
+}
+
+/// 列出固定模型目录（含子目录）下的 .pt / .onnx / .nnue 模型
 #[tauri::command]
-fn list_models() -> Vec<ModelEntry> {
-    let mut out = Vec::new();
-    let search_dir = std::path::Path::new("python/outputs");
-    if search_dir.exists() {
-        collect_models(search_dir, 0, &mut out);
-    } else {
-        let alt_dir = std::path::Path::new("outputs");
-        if alt_dir.exists() {
-            collect_models(alt_dir, 0, &mut out);
-        }
+fn list_models(state: State<AppState>) -> ModelList {
+    let mut models = Vec::new();
+    collect_models(&state.models_dir, 0, &mut models);
+    models.sort_by(|a, b| a.path.cmp(&b.path));
+    ModelList {
+        dir: state.models_dir.to_string_lossy().to_string(),
+        models,
     }
-    out.sort_by(|a, b| a.path.cmp(&b.path));
-    out
+}
+
+/// 在系统文件管理器中打开固定模型目录（便于把模型复制进来）
+#[tauri::command]
+fn open_models_dir(app: tauri::AppHandle, state: State<AppState>) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = state.models_dir.to_string_lossy().to_string();
+    app.opener()
+        .open_path(dir.clone(), None::<&str>)
+        .map_err(|e| format!("打开模型目录失败 {dir}: {e}"))
 }
 
 /// 载入模型：按扩展名分派（.pt → TorchScript（需 torch feature），.onnx → ONNX，
@@ -793,6 +808,28 @@ fn load_nnue_model_impl(path: &str, state: &State<AppState>) -> Result<String, S
 fn load_onnx_model_impl(path: &str, state: &State<AppState>) -> Result<String, String> {
     let model = OnnxModel::new(path, "auto").map_err(|e| format!("ONNX 模型加载失败: {e}"))?;
     let arc_model = Arc::new(model);
+
+    // 用当前局面做一次探针推理：模型输入形状与当前变体不符时立即失败，
+    // 否则搜索阶段只会打印日志并退化成均匀策略（对手变成随机走子）。
+    {
+        let game = state.game.lock().unwrap();
+        let obs = game.get_resnet_state();
+        let (ch, rows, cols) = (
+            obs.board.shape()[0],
+            obs.board.shape()[1],
+            obs.board.shape()[2],
+        );
+        let scalars = obs.scalars.len();
+        let mut board_data = Vec::new();
+        let mut scalars_data = Vec::new();
+        game.encode_resnet_features_flat_into(&mut board_data, &mut scalars_data);
+        arc_model
+            .run(&board_data, &scalars_data, 1, ch, rows, cols, scalars)
+            .map_err(|e| {
+                format!("模型与当前变体不匹配（当前观测 {ch}x{rows}x{cols} / 标量 {scalars}）: {e}")
+            })?;
+    }
+
     {
         let mut model_lock = state.onnx_model.lock().unwrap();
         *model_lock = Some(arc_model.clone());
@@ -909,6 +946,11 @@ fn set_nnue_budget(budget: u64, state: State<AppState>) -> Result<u64, String> {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // 固定模型目录：~/banqi-models，不存在则创建，用户可直接把模型复制进来
+            let dir = models_dir(&app.path().home_dir()?);
+            if let Err(e) = std::fs::create_dir_all(&dir) {
+                eprintln!("创建模型目录失败 {}: {e}", dir.display());
+            }
             // 初始化游戏环境和状态
             let env = DarkChessEnv::new();
             app.manage(AppState {
@@ -928,10 +970,12 @@ pub fn run() {
                 nnue_depth: Mutex::new(8),
                 nnue_budget: Mutex::new(200_000),
                 mcts_tree: Mutex::new(None),
+                models_dir: dir,
             });
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             reset_game,
             step_game,
@@ -941,6 +985,7 @@ pub fn run() {
             get_move_action,
             get_capabilities,
             list_models,
+            open_models_dir,
             load_model,
             set_mcts_iterations,
             set_engine_budget,

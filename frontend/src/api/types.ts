@@ -43,6 +43,12 @@ export interface ModelEntry {
   path: string;
 }
 
+/** list_models 返回：固定模型目录（~/banqi-models）及其中的模型文件。 */
+export interface ModelList {
+  dir: string;
+  models: ModelEntry[];
+}
+
 /** 后端编译期启用的推理后端（torch = TorchScript/MctsDL，onnx = MctsOnnx）。 */
 export interface Capabilities {
   torch: boolean;

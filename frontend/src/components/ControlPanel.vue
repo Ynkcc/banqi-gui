@@ -11,7 +11,9 @@ const {
   capabilities,
   ptModels,
   nnueModels,
+  modelsDir,
   refreshModels,
+  openModelsDir,
   applyEngineBudget,
   applyMctsIters,
   applyNnue,
@@ -178,6 +180,13 @@ async function onLoadNnueModel() {
       </label>
       <button @click="applyNnue">应用设置</button>
       <p class="hint">模型特征维度需与所选变体匹配。</p>
+    </section>
+
+    <section class="panel-card">
+      <h3>模型目录</h3>
+      <p class="hint">把 .pt / .onnx / .nnue 文件复制到此目录（含子目录）后，点上方「刷新列表」即可选中。</p>
+      <p class="hint">{{ modelsDir || '读取中…' }}</p>
+      <button :disabled="store.busy" @click="openModelsDir">打开模型目录</button>
     </section>
   </div>
 </template>

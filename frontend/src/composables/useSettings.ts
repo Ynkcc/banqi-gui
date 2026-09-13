@@ -19,6 +19,8 @@ const capabilities = reactive<Capabilities>({ torch: false, onnx: false });
 const ptModels = ref<ModelEntry[]>([]);
 const nnueModels = ref<ModelEntry[]>([]);
 const modelsLoading = ref(false);
+/** 固定模型目录（~/banqi-models）的绝对路径，由后端在启动时确定 */
+const modelsDir = ref('');
 
 /** 读取后端编译期启用的推理后端（.pt 需 torch，.onnx 需 onnx，.nnue 无依赖）。 */
 async function loadCapabilities() {
@@ -40,7 +42,9 @@ function modelUsable(path: string): boolean {
 async function refreshModels() {
   modelsLoading.value = true;
   try {
-    const models = (await api.listModels()).filter((m) => modelUsable(m.path));
+    const { dir, models: all } = await api.listModels();
+    modelsDir.value = dir;
+    const models = all.filter((m) => modelUsable(m.path));
     ptModels.value = models.filter((m) => !m.path.toLowerCase().endsWith('.nnue'));
     nnueModels.value = models.filter((m) => m.path.toLowerCase().endsWith('.nnue'));
   } catch (e) {
@@ -48,6 +52,16 @@ async function refreshModels() {
     toast.error('加载模型列表失败: ' + e);
   } finally {
     modelsLoading.value = false;
+  }
+}
+
+/** 在系统文件管理器中打开固定模型目录（把模型复制进去后点「刷新列表」即可）。 */
+async function openModelsDir() {
+  try {
+    await api.openModelsDir();
+  } catch (e) {
+    console.error('open_models_dir failed:', e);
+    toast.error('打开模型目录失败: ' + e);
   }
 }
 
@@ -113,7 +127,9 @@ export function useSettings() {
     ptModels,
     nnueModels,
     modelsLoading,
+    modelsDir,
     refreshModels,
+    openModelsDir,
     applyEngineBudget,
     applyMctsIters,
     applyNnue,

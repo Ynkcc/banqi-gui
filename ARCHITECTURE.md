@@ -23,7 +23,7 @@ Tauri 2 桌面 GUI：独立 crate `banqi-tauri`（path 依赖 `banqi-core` + `ba
 
 - 对局：`reset_game`、`step_game`、`bot_move`、`get_game_state`、`get_move_action`、`get_opponent_type`
 - 能力探测：`get_capabilities`（返回编译期 feature 启用的推理后端 `torch`/`onnx`；前端据此隐藏 MctsDL/MctsOnnx 对手与对应的 `.pt`/`.onnx` 模型项）
-- 模型：`list_models`、`load_model`
+- 模型：`list_models`（返回固定模型目录 `~/banqi-models` 绝对路径 + 其中递归收集的 `.pt`/`.onnx`/`.nnue`）、`open_models_dir`（文件管理器中打开该目录，Rust 侧经 `tauri-plugin-opener` 调用，无需前端 capability 配置）、`load_model`（`.onnx` 加载后用当前局面做一次探针推理，模型输入形状与当前变体不符即报错，避免搜索期静默退化为均匀策略）
 - 引擎参数：`set_minimax_depth`、`set_mcts_iterations`、`set_engine_budget`、`set_heuristic_sims`、`set_nnue_depth`、`set_nnue_budget`
 - MCTS 树可视化（懒加载）：`mcts_get_root`、`mcts_get_children`、`mcts_get_node_detail`、`mcts_search`。MctsDL/MctsOnnx 落子后整棵 `MctsArena<DarkChessEnv>` 常驻 `AppState.mcts_tree`，前端按需逐节点拉取子边渲染（SVG 树面板，机会节点 outcome 亦懒展开）
 
@@ -36,4 +36,6 @@ Tauri 2 桌面 GUI：独立 crate `banqi-tauri`（path 依赖 `banqi-core` + `ba
 
 - 2026-09-11：从主仓库 `docs/ARCHITECTURE.md` §5 拆出，作为未来独立仓库的架构文档。
 - 2026-09-11：依赖切换：`banqi_4x8`（主仓库 path）→ `banqi-core` + `banqi-engine`（各自 path；feature `torch`/`onnx` 透传 `banqi-engine`）；`main.rs` 导入路径同步改写（core→`banqi_core::core`，engine/inference/nnue→`banqi_engine`）。
+- 2026-09-13：`load_model`（`.onnx`）新增变体匹配校验：加载后以当前局面做一次 1-batch 探针推理，形状不符直接返回错误（含当前观测维度），修复「模型与变体不匹配时 ONNX 推理失败被吞掉、对手静默变成均匀随机策略」的问题。
+- 2026-09-13：模型路径固定化：模型搜索/存放统一到 `~/banqi-models`（`AppState.models_dir`，`setup` 时创建，不再扫描相对 CWD 的 `python/outputs`、`outputs`）；`list_models` 返回 `{ dir, models }`；新增 `open_models_dir` 命令与 `tauri-plugin-opener` 依赖；前端 ControlPanel 新增「模型目录」卡片（展示绝对路径 + 打开按钮）。
 - 2026-09-13：新增 `get_capabilities` 命令；前端按后端已编译 feature 过滤对手与模型列表（未启用 torch 即不显示 MctsDL 与 `.pt` 模型）。棋盘改为由 `--cell`（容器可用宽高与行列数取 min）推导尺寸，格子恒为正方形且不再溢出容器（修复 4x2 需滚动、棋子变形、托盘/血量卡片被棋盘压住）。

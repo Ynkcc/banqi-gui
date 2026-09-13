@@ -5,7 +5,7 @@ import type {
   MctsEdge,
   MctsNodeDetail,
   MctsRootInfo,
-  ModelEntry,
+  ModelList,
   Opponent,
   StepResult,
   Variant,
@@ -31,7 +31,10 @@ export const api = {
     return invoke<number | null>('get_move_action', { fromSq, toSq });
   },
   listModels() {
-    return invoke<ModelEntry[]>('list_models');
+    return invoke<ModelList>('list_models');
+  },
+  openModelsDir() {
+    return invoke<void>('open_models_dir');
   },
   getCapabilities() {
     return invoke<Capabilities>('get_capabilities');
