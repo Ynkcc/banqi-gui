@@ -83,11 +83,11 @@ export function countByType(names: string[] | undefined): Record<string, number>
 }
 
 export function variantDims(variant: string, boardLen: number): { rows: number; cols: number } {
-  if (variant === 'mini' || boardLen === 8) return { rows: 4, cols: 2 };
+  if (variant === '4x2' || boardLen === 8) return { rows: 4, cols: 2 };
   if (variant === '4x4' || boardLen === 16) return { rows: 4, cols: 4 };
   return { rows: 4, cols: 8 };
 }
 
 export function maxHp(variant: string): number {
-  return variant === 'mini' ? 47 : 60;
+  return variant === '4x2' ? 47 : 60;
 }

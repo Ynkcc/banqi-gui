@@ -7,7 +7,7 @@ import { useToast } from './useToast';
 const toast = useToast();
 
 const settings = reactive({
-  variant: 'dark' as Variant,
+  variant: '4x8' as Variant,
   opponent: 'PvP' as Opponent,
   engineLevel: 300000,
   mctsIters: 200,

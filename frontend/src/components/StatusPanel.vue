@@ -5,7 +5,7 @@ import { maxHp } from '../domain/pieces';
 
 const { store, statusText } = useGame();
 
-const variantMaxHp = computed(() => maxHp(store.state?.variant ?? 'dark'));
+const variantMaxHp = computed(() => maxHp(store.state?.variant ?? '4x8'));
 
 function hpPct(hp: number): string {
   return Math.max(0, Math.min(100, Math.round((hp / variantMaxHp.value) * 100))) + '%';

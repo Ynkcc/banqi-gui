@@ -30,7 +30,7 @@ struct GameState {
     bitboards: HashMap<String, Vec<bool>>,
     hp_red: i32,   // 红方血量
     hp_black: i32, // 黑方血量
-    variant: String, // "dark" = 4x8 暗棋, "mini" = 4x2 迷你暗棋, "4x4" = 4x4 暗棋
+    variant: String, // "4x8" = 标准暗棋, "4x2" = 迷你暗棋, "4x4" = 4x4 暗棋
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -393,12 +393,12 @@ fn reset_game(opponent: Option<String>, variant: Option<String>, state: State<Ap
         _ => OpponentType::PvP,
     };
 
-    // 按变体重建环境：mini = 4x2 迷你暗棋（8 格 / 40 动作空间），
-    // 4x4 = 4x4 暗棋（16 格 / 112 动作空间），
-    // 其余 = 4x8 标准暗棋（32 格 / 192 动作空间）。构造器内部已 reset。
-    *game = match variant.as_deref() {
-        Some("mini") => DarkChessEnv::new_mini(),
-        Some("4x4") => DarkChessEnv::new_4x4(),
+    // 按变体重建环境：4x2 迷你暗棋（8 格 / 40 动作空间），
+    // 4x4 暗棋（16 格 / 112 动作空间），其余 = 4x8 标准暗棋（32 格 / 352 动作空间）。
+    // 变体字符串由 core 的 Variant 单一真源定义；构造器内部已 reset。
+    *game = match variant.as_deref().and_then(Variant::from_str) {
+        Some(Variant::DarkChess4x2) => DarkChessEnv::new_mini(),
+        Some(Variant::DarkChess4x4) => DarkChessEnv::new_4x4(),
         _ => DarkChessEnv::new(),
     };
 
@@ -473,7 +473,7 @@ fn step_game(action: usize, state: State<AppState>) -> Result<StepResult, String
                 winner,
             })
         }
-        Err(e) => Err(e),
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -604,7 +604,7 @@ async fn bot_move(state: State<'_, AppState>) -> Result<StepResult, String> {
                 winner,
             })
         }
-        Err(e) => Err(e),
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -692,13 +692,8 @@ fn extract_game_state(env: &DarkChessEnv) -> GameState {
     let bitboards = env.get_bitboards();
     let hp_red = env.get_hp(Player::Red);
     let hp_black = env.get_hp(Player::Black);
-    let variant = if env.config.cols == 2 {
-        "mini".to_string()
-    } else if env.config.cols == 4 && env.config.rows == 4 {
-        "4x4".to_string()
-    } else {
-        "dark".to_string()
-    };
+    // 变体标识由 core 的 Variant 单一真源给出（"4x8"/"4x4"/"4x2"），避免按行列反推。
+    let variant = env.config.variant.as_str().to_string();
 
     GameState {
         board,

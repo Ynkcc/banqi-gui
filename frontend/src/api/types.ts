@@ -17,7 +17,7 @@ export interface GameState {
   bitboards: Record<string, boolean[]>;
   hp_red: number;
   hp_black: number;
-  variant: 'dark' | '4x4' | 'mini';
+  variant: '4x8' | '4x4' | '4x2';
 }
 
 export interface StepResult {
@@ -36,7 +36,7 @@ export type Opponent =
   | 'MctsOnnx'
   | 'Nnue';
 
-export type Variant = 'dark' | '4x4' | 'mini';
+export type Variant = '4x8' | '4x4' | '4x2';
 
 export interface ModelEntry {
   name: string;

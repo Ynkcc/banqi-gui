@@ -37,9 +37,9 @@ const OPPONENTS = computed(() =>
 );
 
 const VARIANTS: { value: Variant; label: string }[] = [
-  { value: 'dark', label: '暗棋 (4x8)' },
+  { value: '4x8', label: '暗棋 (4x8)' },
   { value: '4x4', label: '暗棋 (4x4)' },
-  { value: 'mini', label: '迷你暗棋 (4x2)' },
+  { value: '4x2', label: '迷你暗棋 (4x2)' },
 ];
 
 const ENGINE_LEVELS = [

@@ -72,7 +72,7 @@ function logMove(prev: GameState, next: GameState) {
 }
 
 function variantMaxConsecutive(s: GameState): number {
-  if (s.variant === 'mini') return 8;
+  if (s.variant === '4x2') return 8;
   if (s.variant === '4x4') return 16;
   return 24;
 }
