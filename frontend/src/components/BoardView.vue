@@ -1,49 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useGame } from '../composables/useGame';
-import { pieceText, slotPlayer, variantDims } from '../domain/pieces';
+import BoardGrid from './BoardGrid.vue';
 
 const { store, onSquareClick } = useGame();
-
-const dims = computed(() =>
-  variantDims(store.state?.variant ?? 'dark', store.state?.board.length ?? 32),
-);
-
-// 棋盘尺寸完全由 CSS 依据容器实际可用宽高与行列数推导（见 global.css 的 --cell），
-// 这里只把行列数交给样式，避免用 aspect-ratio 按宽定高导致 4x2 纵向溢出。
-const boardStyle = computed(() => ({
-  '--board-cols': String(dims.value.cols),
-  '--board-rows': String(dims.value.rows),
-}));
-
-function cellClass(idx: number): string[] {
-  const s = store.state;
-  const slot = s?.board[idx] ?? 'Empty';
-  const classes = ['chess-cell'];
-  if (slot === 'Hidden') classes.push('hidden');
-  else if (slot === 'Empty') classes.push('empty');
-  else classes.push(slotPlayer(slot) === 'Red' ? 'red' : 'black');
-
-  if (store.selectedSquare === idx) classes.push('selected');
-  if (slot === 'Hidden' && s?.action_masks[idx] === 1) classes.push('legal-reveal');
-  const hl = store.moveHighlights.get(idx);
-  if (hl) classes.push(hl.type === 'capture' ? 'legal-capture' : 'legal-move');
-  return classes;
-}
 </script>
 
 <template>
   <div class="board-wrap" :class="{ busy: store.busy }">
-    <div v-if="store.state" class="chess-board" :style="boardStyle">
-      <div
-        v-for="(slot, idx) in store.state.board"
-        :key="idx"
-        :class="cellClass(idx)"
-        @click="onSquareClick(idx)"
-      >
-        {{ pieceText(slot) }}
-      </div>
-    </div>
+    <BoardGrid
+      v-if="store.state"
+      :board="store.state.board"
+      :variant="store.state.variant"
+      :selected="store.selectedSquare"
+      :highlights="store.moveHighlights"
+      :action-masks="store.state.action_masks"
+      @cell-click="onSquareClick"
+    />
     <div v-else class="board-empty">加载中…</div>
     <div v-if="store.busy" class="busy-banner">电脑思考中…</div>
   </div>

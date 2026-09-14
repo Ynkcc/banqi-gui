@@ -142,6 +142,14 @@ struct MctsNodeDetail {
     outcome_count: usize,
 }
 
+/// 搜索树某节点的完整局面（信息状态视角：暗子仍以 Hidden 表示，不泄露真实身份）。
+#[derive(Debug, Clone, Serialize)]
+struct MctsNodeBoard {
+    state: GameState,
+    /// 产生该局面的动作涉及格：翻棋/吃暗子 1 格，移动/炮击 2 格（from, to）；无则为空。
+    move_coords: Vec<usize>,
+}
+
 fn player_label(p: Player) -> String {
     match p {
         Player::Red => "Red".to_string(),
@@ -309,6 +317,36 @@ fn mcts_get_node_detail(node_id: usize, state: State<AppState>) -> Result<MctsNo
         is_expanded: node.is_expanded,
         child_count: node.children.len(),
         outcome_count: node.possible_states.len(),
+    })
+}
+
+/// 读取某节点保存的完整局面（含到达该节点的着法所在格）。
+#[tauri::command]
+fn mcts_get_node_board(node_id: usize, state: State<AppState>) -> Result<MctsNodeBoard, String> {
+    let guard = state.mcts_tree.lock().unwrap();
+    let tree = guard.as_ref().ok_or("暂无 MCTS 搜索树")?;
+    let node = tree.arena.get(node_id);
+    let env = node
+        .env
+        .as_ref()
+        .ok_or_else(|| format!("节点 {node_id} 未保存局面"))?;
+    // 机会节点保存的是「翻棋前」局面，其 last_action 仍指向父节点的着法；
+    // 故改从任一机会结果子节点取回真正的翻棋动作。
+    let action = if node.is_chance_node {
+        node.possible_states
+            .first()
+            .and_then(|(_, _, idx)| tree.arena.get(*idx).env.as_ref())
+            .and_then(|e| e.get_last_action())
+            .or_else(|| env.get_last_action())
+    } else {
+        env.get_last_action()
+    };
+    let move_coords = action
+        .and_then(|a| env.get_coords_for_action(a))
+        .unwrap_or_default();
+    Ok(MctsNodeBoard {
+        state: extract_game_state(env),
+        move_coords,
     })
 }
 
@@ -994,6 +1032,7 @@ pub fn run() {
             mcts_get_root,
             mcts_get_children,
             mcts_get_node_detail,
+            mcts_get_node_board,
             mcts_search
         ])
         .run(tauri::generate_context!())

@@ -3,6 +3,7 @@ import type {
   Capabilities,
   GameState,
   MctsEdge,
+  MctsNodeBoard,
   MctsNodeDetail,
   MctsRootInfo,
   ModelList,
@@ -62,6 +63,9 @@ export const api = {
   },
   mctsGetNodeDetail(nodeId: number) {
     return invoke<MctsNodeDetail>('mcts_get_node_detail', { nodeId });
+  },
+  mctsGetNodeBoard(nodeId: number) {
+    return invoke<MctsNodeBoard>('mcts_get_node_board', { nodeId });
   },
   mctsSearch() {
     return invoke<MctsRootInfo>('mcts_search');

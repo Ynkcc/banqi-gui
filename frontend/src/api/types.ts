@@ -84,6 +84,12 @@ export interface MctsRootInfo {
   chosen_action: number;
 }
 
+/** mcts_get_node_board 返回：某节点保存的完整局面（信息状态视角）+ 到达该节点的着法所在格。 */
+export interface MctsNodeBoard {
+  state: GameState;
+  move_coords: number[];
+}
+
 export interface MctsNodeDetail {
   id: number;
   prior: number;

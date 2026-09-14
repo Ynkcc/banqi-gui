@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 import { api } from '../api/client';
-import type { MctsEdge, MctsNodeDetail, MctsRootInfo } from '../api/types';
+import type { MctsEdge, MctsNodeBoard, MctsNodeDetail, MctsRootInfo } from '../api/types';
 import { useToast } from './useToast';
 
 const toast = useToast();
@@ -24,6 +24,10 @@ interface MctsStore {
   expanded: Set<number>;
   showAll: boolean;
   searching: boolean;
+  selectedId: number | null;
+  selectedBoard: MctsNodeBoard | null;
+  selectedDetail: MctsNodeDetail | null;
+  inspectorLoading: boolean;
 }
 
 const store = reactive<MctsStore>({
@@ -31,10 +35,16 @@ const store = reactive<MctsStore>({
   expanded: new Set(),
   showAll: false,
   searching: false,
+  selectedId: null,
+  selectedBoard: null,
+  selectedDetail: null,
+  inspectorLoading: false,
 });
 
 const childrenCache = new Map<number, MctsEdge[]>();
 const summaries = new Map<number, { n: number; q: number }>();
+const boardCache = new Map<number, MctsNodeBoard>();
+const detailCache = new Map<number, MctsNodeDetail>();
 
 export const treeTransform = reactive({ scale: 1, tx: 0, ty: 0 });
 
@@ -67,12 +77,64 @@ async function refresh(): Promise<void> {
     childrenCache.clear();
     summaries.clear();
     summaries.set(info.root.id, { n: info.root.n, q: info.root.q });
+    // 树重建后节点 id 全部失效，需清空局面/详情缓存与选中态
+    boardCache.clear();
+    detailCache.clear();
+    store.selectedId = null;
+    store.selectedBoard = null;
+    store.selectedDetail = null;
+    store.inspectorLoading = false;
     resetView();
     await ensureChildren(info.root.id);
   } catch (e) {
     store.rootInfo = null;
     toast.info(String(e));
   }
+}
+
+/** 选中某个节点并在右侧检视区展示其局面与统计。 */
+async function select(nodeId: number): Promise<void> {
+  store.selectedId = nodeId;
+  store.selectedBoard = boardCache.get(nodeId) ?? null;
+  store.selectedDetail = detailCache.get(nodeId) ?? null;
+  store.inspectorLoading = true;
+  try {
+    const [board, detail] = await Promise.all([
+      boardCache.get(nodeId) ?? api.mctsGetNodeBoard(nodeId),
+      fetchDetail(nodeId),
+    ]);
+    boardCache.set(nodeId, board);
+    if (store.selectedId !== nodeId) return;
+    store.selectedBoard = board;
+    store.selectedDetail = detail;
+  } catch (e) {
+    console.error('mcts node inspector failed:', e);
+    if (store.selectedId === nodeId) {
+      store.selectedBoard = null;
+      store.selectedDetail = null;
+    }
+  } finally {
+    if (store.selectedId === nodeId) store.inspectorLoading = false;
+  }
+}
+
+function clearSelection() {
+  store.selectedId = null;
+  store.selectedBoard = null;
+  store.selectedDetail = null;
+  store.inspectorLoading = false;
+}
+
+/** 从根沿访问次数最大的子节点走到叶：主变例路径（仅覆盖已加载的边）。 */
+function pvNodeIds(root: MctsLayoutNode): Set<number> {
+  const pv = new Set<number>();
+  let node: MctsLayoutNode | undefined = root;
+  while (node) {
+    pv.add(node.id);
+    if (node.children.length === 0) break;
+    node = node.children.reduce((best, c) => (c.n > best.n ? c : best));
+  }
+  return pv;
 }
 
 async function toggle(nodeId: number) {
@@ -101,8 +163,12 @@ async function search() {
 }
 
 async function fetchDetail(nodeId: number): Promise<MctsNodeDetail | null> {
+  const cached = detailCache.get(nodeId);
+  if (cached) return cached;
   try {
-    return await api.mctsGetNodeDetail(nodeId);
+    const detail = await api.mctsGetNodeDetail(nodeId);
+    detailCache.set(nodeId, detail);
+    return detail;
   } catch {
     return null;
   }
@@ -155,6 +221,9 @@ export function useMctsTree() {
     toggle,
     search,
     fetchDetail,
+    select,
+    clearSelection,
+    pvNodeIds,
     buildLayout,
     collectNodes,
     hasChildren(id: number) {

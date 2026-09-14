@@ -315,6 +315,18 @@ button.mini {
   cursor: wait;
 }
 
+.chess-cell.move-marker {
+  box-shadow:
+    0 0 0 3px #ff8a00,
+    2px 2px 2px rgba(0, 0, 0, 0.2);
+}
+.chess-cell.static {
+  cursor: default;
+}
+.chess-cell.static:hover {
+  filter: none;
+}
+
 .chess-cell.legal-move::before,
 .chess-cell.legal-capture::before,
 .chess-cell.legal-reveal::before {
@@ -643,7 +655,7 @@ button.mini {
 }
 
 .mcts-sidebar {
-  width: min(720px, 85vw);
+  width: min(1240px, 94vw);
 }
 
 /* ===================== Bitboard ===================== */
@@ -707,9 +719,15 @@ button.mini {
   margin-left: auto;
   color: #6b6152;
 }
-.mcts-svg-wrap {
+.mcts-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.mcts-tree-zone {
   position: relative;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   background:
     linear-gradient(rgba(74, 63, 47, 0.06) 1px, transparent 1px),
@@ -717,8 +735,71 @@ button.mini {
   background-size: 24px 24px;
   cursor: grab;
 }
-.mcts-svg-wrap:active {
+.mcts-tree-zone:active {
   cursor: grabbing;
+}
+.mcts-inspector {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid #ddd2c0;
+  background: #fbf9f4;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mcts-inspector h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4a3f2f;
+}
+.mcts-inspector-empty {
+  margin: 0;
+  color: #8a8378;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.mcts-board-host {
+  width: 100%;
+  height: 210px;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mcts-move-label {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #b0651f;
+  text-align: center;
+}
+.mcts-stats {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+}
+.mcts-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dashed #e6ddcc;
+  padding-bottom: 2px;
+}
+.mcts-stats dt {
+  color: #8a8378;
+  flex-shrink: 0;
+}
+.mcts-stats dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #4a3f2f;
+}
+.mcts-clear {
+  align-self: flex-start;
 }
 .mcts-node {
   cursor: pointer;
@@ -729,9 +810,18 @@ button.mini {
   stroke-width: 1.5;
   filter: drop-shadow(1px 2px 2px rgba(60, 50, 30, 0.18));
 }
-.mcts-node-rect.is-chosen {
+.mcts-node-rect.is-chosen,
+.mcts-node-rect.is-selected {
   stroke: #d32f2f;
   stroke-width: 3;
+}
+.mcts-node-rect.is-selected {
+  fill: #fff4d6;
+  filter: drop-shadow(0 0 6px rgba(211, 47, 47, 0.45));
+}
+.mcts-node-rect.is-pv:not(.is-chosen):not(.is-selected) {
+  stroke: #0d6efd;
+  stroke-width: 2.5;
 }
 .mcts-node-title {
   font-size: 12px;
@@ -764,20 +854,6 @@ button.mini {
   padding: 24px;
   text-align: center;
 }
-.mcts-tooltip {
-  position: absolute;
-  z-index: 30;
-  pointer-events: none;
-  background: rgba(40, 34, 24, 0.94);
-  color: #f2ead9;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  max-width: 240px;
-  white-space: nowrap;
-}
-
 /* ===================== Toast ===================== */
 .toast-container {
   position: fixed;
