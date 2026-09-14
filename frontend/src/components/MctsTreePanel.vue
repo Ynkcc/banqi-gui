@@ -89,6 +89,8 @@ function pathWidth(n: { id: number }, c: { id: number; edge: MctsEdge | null }):
   return edgeWidth(c);
 }
 
+const valueClass = (v: number) => (v > 0 ? 'val-pos' : v < 0 ? 'val-neg' : undefined);
+
 function nodeClass(n: { id: number; edge: MctsEdge | null }): Record<string, boolean> {
   return {
     'is-chosen': isChosenEdge(n),
@@ -167,11 +169,9 @@ function transformAttr(): string {
       </button>
       <button @click="refresh">刷新</button>
       <label><input v-model="store.showAll" type="checkbox" /> 显示全部子节点</label>
-      <span v-if="rootInfo" class="mcts-info">
-        根 N={{ rootInfo.root.n }} Q={{ rootInfo.root.q.toFixed(3) }} 选择动作 #{{
-          rootInfo.chosen_action
-        }}
-      </span>
+      <span v-if="rootInfo" class="mcts-info">根 N={{ rootInfo.root.n }}
+        <span :class="valueClass(rootInfo.root.q)">Q={{ rootInfo.root.q.toFixed(3) }}</span>
+        选择动作 #{{ rootInfo.chosen_action }}</span>
     </div>
     <div class="mcts-body">
       <div
@@ -231,7 +231,8 @@ function transformAttr(): string {
                 {{ nodeTitle(n) }}
               </text>
               <text :y="14" text-anchor="middle" class="mcts-node-stats">
-                N={{ n.n }} Q={{ n.q.toFixed(2) }}
+                <tspan>N={{ n.n }}</tspan>
+                <tspan dx="4" :class="valueClass(n.q)">Q={{ n.q.toFixed(2) }}</tspan>
               </text>
               <g v-if="hasChildren(n.id)" class="mcts-collapse">
                 <circle :cy="NH / 2" r="9" />
@@ -306,11 +307,26 @@ function transformAttr(): string {
             </div>
             <template v-if="store.selectedDetail">
               <div><dt>N</dt><dd>{{ store.selectedDetail.n }}</dd></div>
-              <div><dt>Q</dt><dd>{{ store.selectedDetail.q.toFixed(4) }}</dd></div>
-              <div><dt>Q_hp</dt><dd>{{ store.selectedDetail.health_q.toFixed(4) }}</dd></div>
+              <div>
+                <dt>Q</dt>
+                <dd :class="valueClass(store.selectedDetail.q)">
+                  {{ store.selectedDetail.q.toFixed(4) }}
+                </dd>
+              </div>
+              <div>
+                <dt>Q_hp</dt>
+                <dd :class="valueClass(store.selectedDetail.health_q)">
+                  {{ store.selectedDetail.health_q.toFixed(4) }}
+                </dd>
+              </div>
               <div><dt>prior</dt><dd>{{ store.selectedDetail.prior.toFixed(4) }}</dd></div>
               <div><dt>logit</dt><dd>{{ store.selectedDetail.logit.toFixed(3) }}</dd></div>
-              <div><dt>V 先验</dt><dd>{{ store.selectedDetail.initial_value.toFixed(4) }}</dd></div>
+              <div>
+                <dt>V 先验</dt>
+                <dd :class="valueClass(store.selectedDetail.initial_value)">
+                  {{ store.selectedDetail.initial_value.toFixed(4) }}
+                </dd>
+              </div>
               <div>
                 <dt>子树</dt>
                 <dd>

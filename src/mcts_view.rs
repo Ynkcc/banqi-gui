@@ -155,6 +155,7 @@ pub(crate) fn mcts_search_blocking(
             let mut mcts = GumbelMCTS::new(env, &evaluator, config);
             let result = mcts
                 .run()
+                .map_err(|e| e.to_string())?
                 .ok_or_else(|| "MCTS 搜索无合法动作".to_string())?;
             Ok(MctsTreeHandle {
                 root_idx: mcts.root_idx,
@@ -171,6 +172,7 @@ pub(crate) fn mcts_search_blocking(
             let mut mcts = GumbelMCTS::new(env, &evaluator, config);
             let result = mcts
                 .run()
+                .map_err(|e| e.to_string())?
                 .ok_or_else(|| "MCTS 搜索无合法动作".to_string())?;
             Ok(MctsTreeHandle {
                 root_idx: mcts.root_idx,

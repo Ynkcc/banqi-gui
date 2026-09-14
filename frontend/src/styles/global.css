@@ -833,6 +833,16 @@ button.mini {
   fill: #6b6152;
   font-variant-numeric: tabular-nums;
 }
+.val-pos,
+.mcts-stats dd.val-pos {
+  color: #1e7d43;
+  fill: #1e7d43;
+}
+.val-neg,
+.mcts-stats dd.val-neg {
+  color: #c0392b;
+  fill: #c0392b;
+}
 .mcts-collapse circle {
   fill: #4a3f2f;
   stroke: #fffdf8;
